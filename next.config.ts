@@ -19,11 +19,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Expose server-side environment variables to the Next.js app
-  serverRuntimeConfig: {
-    SERVICE_ACCOUNT_JSON: process.env.SERVICE_ACCOUNT_JSON,
-    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  }
 };
 
 export default nextConfig;
