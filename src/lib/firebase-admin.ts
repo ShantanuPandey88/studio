@@ -15,11 +15,8 @@ interface FirebaseAdminServices {
 let adminServices: FirebaseAdminServices | null = null;
 
 /**
- * Initializes the Firebase Admin SDK. It uses a singleton pattern
- * to ensure initialization only happens once.
- *
- * It relies on the SERVICE_ACCOUNT_JSON environment variable, which
- * should be populated by the server runtime via next.config.js.
+ * Initializes the Firebase Admin SDK using a singleton pattern.
+ * It relies on the SERVICE_ACCOUNT_JSON environment variable.
  */
 export function initializeAdminApp(): FirebaseAdminServices {
   // If the singleton is already initialized, return it.

@@ -19,12 +19,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Make environment variables available on the server.
-  // This is the crucial part that pipes the App Hosting secret
-  // into the server-side runtime environment.
-  serverRuntimeConfig: {
-    SERVICE_ACCOUNT_JSON: process.env.SERVICE_ACCOUNT_JSON,
-  },
 };
 
 export default nextConfig;
