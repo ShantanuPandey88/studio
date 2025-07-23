@@ -6,8 +6,6 @@ import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { cert, ServiceAccount } from 'firebase-admin/app';
-import * as fs from 'fs';
-import * as path from 'path';
 
 interface FirebaseAdminServices {
   app: App;
@@ -38,9 +36,7 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
     } else {
       // Fallback for local development: use a local file
       console.log('Service account environment variable not found. Falling back to local service-account.json file.');
-      const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
-      const serviceAccountFileContent = fs.readFileSync(serviceAccountPath, 'utf8');
-      const serviceAccount = JSON.parse(serviceAccountFileContent);
+      const serviceAccount = require('../../../service-account.json');
       credential = cert(serviceAccount);
     }
     
