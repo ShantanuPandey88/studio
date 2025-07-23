@@ -6,6 +6,8 @@ import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { cert, ServiceAccount } from 'firebase-admin/app';
+import * as path from 'path';
+import * as fs from 'fs';
 
 interface FirebaseAdminServices {
   app: App;
@@ -36,7 +38,14 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
     } else {
       // Fallback for local development: use a local file
       console.log('Service account environment variable not found. Falling back to local service-account.json file.');
-      const serviceAccount = require('../../../service-account.json');
+      const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
+
+      if (!fs.existsSync(serviceAccountPath)) {
+        throw new Error(`The service account file was not found at ${serviceAccountPath}. Please ensure 'service-account.json' is in the project root.`);
+      }
+
+      const serviceAccountFileContent = fs.readFileSync(serviceAccountPath, 'utf8');
+      const serviceAccount = JSON.parse(serviceAccountFileContent) as ServiceAccount;
       credential = cert(serviceAccount);
     }
     
@@ -62,6 +71,6 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
          throw new Error('Firebase Admin SDK initialization failed: Service account credentials are not available.');
     }
     console.error('CRITICAL: Failed to parse credentials or initialize Firebase Admin SDK.', e);
-    throw new Error('Firebase Admin SDK initialization failed due to invalid service account credentials.');
+    throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`);
   }
 }
