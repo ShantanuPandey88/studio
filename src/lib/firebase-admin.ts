@@ -6,8 +6,6 @@ import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
 import { cert, ServiceAccount } from 'firebase-admin/app';
-import * as path from 'path';
-import * as fs from 'fs';
 
 interface FirebaseAdminServices {
   app: App;
@@ -15,43 +13,31 @@ interface FirebaseAdminServices {
   db: Firestore;
 }
 
-// This is a global singleton to ensure we only initialize once.
-let adminServices: FirebaseAdminServices | null = null;
-
+// This function initializes the Firebase Admin SDK.
+// It is designed to be called wherever admin services are needed.
+// The firebase-admin SDK handles singleton behavior internally, preventing re-initialization.
 export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
-  // If the app is already initialized, return the existing services.
-  if (admin.apps.length && adminServices) {
-    return adminServices;
+  // If the default app is already initialized, return its services.
+  if (admin.apps.length > 0 && admin.apps[0]) {
+    const app = admin.apps[0];
+    const auth = admin.auth(app);
+    const db = admin.firestore(app);
+    return { app, auth, db };
   }
 
-  console.log('Initializing Firebase Admin SDK...');
-  
+  const serviceAccountString = process.env.SERVICE_ACCOUNT_JSON;
+
+  if (!serviceAccountString) {
+    console.error('CRITICAL: SERVICE_ACCOUNT_JSON environment variable not set.');
+    throw new Error('Firebase Admin SDK initialization failed: Service account credentials are not available in the environment.');
+  }
+
   try {
-    let credential;
-    const serviceAccountString = process.env.SERVICE_ACCOUNT_JSON;
-
-    if (serviceAccountString) {
-      // Use service account from environment variable (for deployed environments)
-      console.log('Initializing with service account from environment variable.');
-      const serviceAccount = JSON.parse(serviceAccountString) as ServiceAccount;
-      credential = cert(serviceAccount);
-    } else {
-      // Fallback for local development: use a local file
-      console.log('Service account environment variable not found. Falling back to local service-account.json file.');
-      const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
-
-      if (!fs.existsSync(serviceAccountPath)) {
-        throw new Error(`The service account file was not found at ${serviceAccountPath}. Please ensure 'service-account.json' is in the project root.`);
-      }
-
-      const serviceAccountFileContent = fs.readFileSync(serviceAccountPath, 'utf8');
-      const serviceAccount = JSON.parse(serviceAccountFileContent) as ServiceAccount;
-      credential = cert(serviceAccount);
-    }
+    const serviceAccount = JSON.parse(serviceAccountString) as ServiceAccount;
     
-    // Initialize the app with the provided service account.
+    console.log('Initializing Firebase Admin SDK...');
     const app = admin.initializeApp({
-      credential,
+      credential: cert(serviceAccount),
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     });
     
@@ -61,16 +47,11 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
     // Set the database ID for all Firestore operations.
     db.settings({ databaseId: 'seatservesb' });
     
-    adminServices = { app, auth, db };
     console.log('Firebase Admin SDK initialized successfully.');
-    return adminServices;
+    return { app, auth, db };
 
   } catch (e: any) {
-    if (e.code === 'MODULE_NOT_FOUND' || e.code === 'ENOENT') {
-         console.error('CRITICAL: Failed to find service account. Please ensure SERVICE_ACCOUNT_JSON env var is set or service-account.json file exists in the root.');
-         throw new Error('Firebase Admin SDK initialization failed: Service account credentials are not available.');
-    }
-    console.error('CRITICAL: Failed to parse credentials or initialize Firebase Admin SDK.', e);
-    throw new Error(`Firebase Admin SDK initialization failed: ${e.message}`);
+    console.error('CRITICAL: Failed to parse SERVICE_ACCOUNT_JSON or initialize Firebase Admin SDK.', e);
+    throw new Error('Firebase Admin SDK initialization failed due to invalid service account credentials.');
   }
 }
