@@ -1,0 +1,42 @@
+
+{
+  "hosting": {
+    "source": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "frameworksBackend": {
+      "id": "seatserve",
+      "region": "us-central1"
+    },
+    "rewrites": [
+      {
+        "source": "**",
+        "backend": {
+          "id": "seatserve",
+          "region": "us-central1"
+        }
+      }
+    ]
+  },
+  "apphosting": {
+    "backendId": "studio",
+    "rootDir": "/",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ]
+  },
+  "emulators": {
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9199,
+      "import": "/tmp/firebase/emulators/storage"
+    }
+  }
+}
