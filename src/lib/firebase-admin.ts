@@ -1,4 +1,6 @@
 
+'use server';
+
 import * as admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
@@ -14,7 +16,7 @@ interface FirebaseAdminServices {
 // This is a global singleton to ensure we only initialize once.
 let adminServices: FirebaseAdminServices | null = null;
 
-export function initializeAdminApp(): FirebaseAdminServices {
+export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
   // If the app is already initialized, return the existing services.
   if (admin.apps.length && adminServices) {
     return adminServices;

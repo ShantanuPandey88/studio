@@ -62,7 +62,7 @@ const getEmployeeTeam = ai.defineTool(
   },
   async input => {
     console.log(`Getting team for ${input.employeeName}`);
-    const {db} = initializeAdminApp();
+    const {db} = await initializeAdminApp();
     const users = await getUsers(db);
     const employee = users.find(u => u.displayName === input.employeeName);
     if (!employee || !employee.team) return [];
@@ -82,7 +82,7 @@ const getPastSeatingForEmployee = ai.defineTool(
   },
   async input => {
     console.log(`Getting past seating for ${input.employeeName}`);
-    const {db} = initializeAdminApp();
+    const {db} = await initializeAdminApp();
     const bookings: Booking[] = [];
     const bookingsSnapshot = await db.collection('bookings').get();
     bookingsSnapshot.forEach(doc => {
@@ -109,7 +109,7 @@ const getAvailableDesksForDate = ai.defineTool(
   },
   async input => {
       console.log(`Getting available desks for ${input.date}`);
-      const {db} = initializeAdminApp();
+      const {db} = await initializeAdminApp();
       const desksSnapshot = await db.collection('desks').get();
       const allDeskIds = desksSnapshot.docs.map(doc => doc.id);
 
