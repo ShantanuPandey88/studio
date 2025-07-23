@@ -32,7 +32,7 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
       // This fallback is for local development when `service-account.json` is used.
       console.log('Service account environment variable not found. Falling back to local service-account.json file.');
       try {
-        const serviceAccount = require('../../../service-account.json');
+        const serviceAccount = require('../../service-account.json');
         const app = admin.initializeApp({
           credential: cert(serviceAccount),
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
