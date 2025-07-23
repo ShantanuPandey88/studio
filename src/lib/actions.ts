@@ -181,17 +181,23 @@ export async function addUser(payload: AddUserPayload) {
 }
 
 export async function deleteUserAction(uid: string) {
-    const { auth, db } = await initializeAdminApp();
-    const userToUpdate = await auth.getUser(uid);
-    if (userToUpdate.customClaims?.admin) {
-        const adminUsersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
-        if (adminUsersSnapshot.size <= 1) {
-            throw new Error("Cannot delete the only admin account.");
+    try {
+        const { auth, db } = await initializeAdminApp();
+        const userToUpdate = await auth.getUser(uid);
+        if (userToUpdate.customClaims?.admin) {
+            const adminUsersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
+            if (adminUsersSnapshot.size <= 1) {
+                throw new Error("Cannot delete the only admin account.");
+            }
         }
-    }
 
-    await auth.deleteUser(uid);
-    await db.collection('users').doc(uid).delete();
+        await auth.deleteUser(uid);
+        await db.collection('users').doc(uid).delete();
+    } catch (error: any) {
+        console.error("Error in deleteUserAction:", error);
+        // Re-throw a more specific error to be caught by the client component.
+        throw new Error(error.message || "An unexpected error occurred while deleting the user.");
+    }
 }
 
 export type UpdateUserPayload = {
