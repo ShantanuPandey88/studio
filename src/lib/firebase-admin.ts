@@ -30,6 +30,7 @@ export function initializeAdminApp(): FirebaseAdminServices {
     const app = admin.apps[0]!;
     const auth = admin.auth(app);
     const db = admin.firestore(app);
+    db.settings({ databaseId: 'seatservesb' });
     adminServices = { app, auth, db };
     return adminServices;
   }
