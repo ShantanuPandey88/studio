@@ -12,6 +12,7 @@ const firebaseConfig: FirebaseOptions = {
     storageBucket: "YOUR_STORAGE_BUCKET",
     messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
     appId: "YOUR_APP_ID",
+    databaseURL: "https://seatserve-575q9.firebaseio.com",
 };
 
 // This function is the single source of truth for the Firebase app instance.
