@@ -17,6 +17,11 @@ const firebaseConfig: FirebaseOptions = {
 // This function is the single source of truth for the Firebase app instance.
 // It ensures that the app is initialized only once (singleton pattern).
 export function getFirebaseApp(config: FirebaseOptions = firebaseConfig): FirebaseApp {
+    // On the client-side, we'll use the globally available config from firebase-config.js
+    if (typeof window !== 'undefined' && (window as any).firebaseConfig) {
+        config = (window as any).firebaseConfig;
+    }
+
     if (getApps().length) {
         return getApp();
     }
@@ -24,7 +29,7 @@ export function getFirebaseApp(config: FirebaseOptions = firebaseConfig): Fireba
     // Validate that the config object is populated before initializing
     if (!config.apiKey || !config.projectId || !config.authDomain) {
         // This error is a critical development-time feedback mechanism.
-        throw new Error("Firebase config is missing or invalid. Check your .env.local file and ensure all NEXT_PUBLIC_FIREBASE_ variables are set correctly.");
+        throw new Error("Firebase config is missing or invalid. Check your .env.local file and ensure all NEXT_PUBLIC_FIREBASE_ variables are set correctly, or ensure firebase-config.js is loaded.");
     }
     
     return initializeApp(config);
