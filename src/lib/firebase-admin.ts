@@ -21,7 +21,7 @@ let adminServices: FirebaseAdminServices | null = null;
  * On Firebase App Hosting or other Google Cloud environments, the SDK
  * automatically finds the necessary credentials.
  */
-export function initializeAdminApp(): FirebaseAdminServices {
+export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
   if (admin.apps.length > 0 && adminServices) {
     return adminServices;
   }
