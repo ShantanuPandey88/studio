@@ -3,7 +3,7 @@ import * as admin from 'firebase-admin';
 import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
-import { cert } from 'firebase-admin/app';
+import { cert, ServiceAccount } from 'firebase-admin/app';
 
 interface FirebaseAdminServices {
   app: App;
@@ -19,7 +19,7 @@ let adminServices: FirebaseAdminServices | null = null;
  * to ensure initialization only happens once.
  *
  * It relies on the SERVICE_ACCOUNT_JSON environment variable, which
- * should be populated by the server runtime (e.g., via next.config.js).
+ * should be populated by the server runtime via next.config.js.
  */
 export function initializeAdminApp(): FirebaseAdminServices {
   // If the singleton is already initialized, return it.
@@ -37,17 +37,16 @@ export function initializeAdminApp(): FirebaseAdminServices {
     return adminServices;
   }
 
-  // If no app is initialized, create a new one.
   console.log('Initializing Firebase Admin SDK...');
   const serviceAccountString = process.env.SERVICE_ACCOUNT_JSON;
 
   if (!serviceAccountString) {
     console.error('CRITICAL: SERVICE_ACCOUNT_JSON environment variable is not set. Admin SDK cannot be initialized.');
-    throw new Error('Server configuration error: Service account credentials are not available.');
+    throw new Error('Service account credentials are not available. Check your App Hosting backend configuration and secrets.');
   }
 
   try {
-    const serviceAccount = JSON.parse(serviceAccountString);
+    const serviceAccount = JSON.parse(serviceAccountString) as ServiceAccount;
 
     const app = admin.initializeApp({
       credential: cert(serviceAccount),
