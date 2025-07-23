@@ -2,9 +2,10 @@
 'use server';
 
 import * as admin from 'firebase-admin';
-import type { App } from 'firebase-admin/app';
+import { App, cert } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
 import type { Firestore } from 'firebase-admin/firestore';
+import { getConfig } from 'next/config';
 
 interface FirebaseAdminServices {
   app: App;
@@ -15,11 +16,9 @@ interface FirebaseAdminServices {
 let adminServices: FirebaseAdminServices | null = null;
 
 /**
- * Initializes the Firebase Admin SDK using Application Default Credentials.
- * This function should only be called in a server-side environment.
+ * Initializes the Firebase Admin SDK using a service account from an
+ * environment variable. This ensures a single, explicit authentication method.
  * It ensures the SDK is initialized only once (singleton pattern).
- * On Firebase App Hosting or other Google Cloud environments, the SDK
- * automatically finds the necessary credentials.
  */
 export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
   if (admin.apps.length > 0 && adminServices) {
@@ -29,7 +28,21 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
   console.log('Initializing Firebase Admin SDK...');
 
   try {
-    const app = admin.initializeApp();
+    // Get server-side environment variables from next.config.js
+    const { serverRuntimeConfig } = getConfig();
+    const serviceAccountString = serverRuntimeConfig.SERVICE_ACCOUNT_JSON;
+
+    if (!serviceAccountString) {
+      throw new Error('SERVICE_ACCOUNT_JSON environment variable is not set. Check next.config.ts and apphosting.yaml.');
+    }
+    
+    // Parse the service account key from the environment variable.
+    const serviceAccount = JSON.parse(serviceAccountString);
+
+    const app = admin.initializeApp({
+        credential: cert(serviceAccount)
+    });
+    
     const auth = admin.auth(app);
     const db = admin.firestore(app);
 
@@ -37,7 +50,7 @@ export async function initializeAdminApp(): Promise<FirebaseAdminServices> {
     db.settings({ databaseId: 'seatservesb' });
 
     adminServices = { app, auth, db };
-    console.log('Firebase Admin SDK initialized successfully.');
+    console.log('Firebase Admin SDK initialized successfully via environment variable.');
     return adminServices;
 
   } catch (error: any) {

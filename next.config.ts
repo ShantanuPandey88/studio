@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Make environment variables available on the server.
+  serverRuntimeConfig: {
+    SERVICE_ACCOUNT_JSON: process.env.SERVICE_ACCOUNT_JSON,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  },
 };
 
 export default nextConfig;
