@@ -47,23 +47,57 @@ export default function HomePage() {
   const [bookingToConfirm, setBookingToConfirm] = React.useState<string | null>(null);
   const { toast } = useToast();
 
+  // --- DEBUG LOGS START ---
+  React.useEffect(() => {
+    console.log("=========================================");
+    console.log("======  SeatServe Debugging Panel  ======");
+    console.log("=========================================");
+    console.log("[Auth Status] User:", user);
+    console.log("[Auth Status] Firestore DB Object:", db);
+    console.log("-----------------------------------------");
+    console.log("[Component State] Selected Date:", selectedDate ? format(selectedDate, "PPP") : "undefined");
+    console.log("-----------------------------------------");
+    console.log("[Firestore Data] All Bookings:", bookings);
+    console.log("[Firestore Data] All Desks:", desks);
+    console.log("[Firestore Data] All Holidays:", holidays);
+    console.log("[Firestore Data] All Employees:", employees);
+    console.log("=========================================");
+
+  }, [user, db, selectedDate, bookings, desks, holidays, employees]);
+  // --- DEBUG LOGS END ---
+
+
   React.useEffect(() => {
     if (!user || !db) return; // Wait until user and db are authenticated
+
+    console.log("%c[DEBUG] Auth context ready, setting up Firestore listeners...", "color: green;");
 
     let unsubBookings: Unsubscribe | undefined;
     let unsubHolidays: Unsubscribe | undefined;
     let unsubDesks: Unsubscribe | undefined;
     
     // Only set up listeners if the user is authenticated
-    unsubBookings = getBookings(db, setBookings);
-    unsubHolidays = getHolidays(db, setHolidays);
-    unsubDesks = getDesks(db, setDesks, (err) => console.error(err));
+    unsubBookings = getBookings(db, (newBookings) => {
+        console.log("%c[DEBUG] Received bookings update:", "color: blue;", newBookings);
+        setBookings(newBookings);
+    });
+    unsubHolidays = getHolidays(db, (newHolidays) => {
+        console.log("%c[DEBUG] Received holidays update:", "color: blue;", newHolidays);
+        setHolidays(newHolidays);
+    });
+    unsubDesks = getDesks(db, (newDesks) => {
+        console.log("%c[DEBUG] Received desks update:", "color: blue;", newDesks);
+        setDesks(newDesks);
+    }, (err) => console.error(err));
     
     getUsers(db).then(allUsers => {
-        setEmployees(allUsers.filter(u => u.role !== 'admin' && !u.disabled));
+        const filteredUsers = allUsers.filter(u => u.role !== 'admin' && !u.disabled);
+        console.log("%c[DEBUG] Fetched and filtered employees:", "color: blue;", filteredUsers);
+        setEmployees(filteredUsers);
     });
 
     return () => {
+        console.log("%c[DEBUG] Cleaning up Firestore listeners.", "color: orange;");
         unsubBookings?.();
         unsubHolidays?.();
         unsubDesks?.();
