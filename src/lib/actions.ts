@@ -100,7 +100,7 @@ export type SignupUserPayload = {
 
 export async function signupUser(payload: SignupUserPayload) {
     const { auth, db } = await initializeAdminApp();
-    if (!payload.email.endsWith('@t-systems.com')) {
+    if (!payload.email.toLowerCase().endsWith('@t-systems.com')) {
         throw new Error('Only @t-systems.com emails are allowed to sign up.');
     }
     
@@ -154,7 +154,7 @@ export type AddUserPayload = {
 
 export async function addUser(payload: AddUserPayload) {
      const { auth, db } = await initializeAdminApp();
-     if (!payload.email.endsWith('@t-systems.com')) {
+     if (!payload.email.toLowerCase().endsWith('@t-systems.com')) {
         throw new Error('Only @t-systems.com emails are allowed.');
     }
     const userRecord = await auth.createUser({

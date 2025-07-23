@@ -41,7 +41,7 @@ const formSchema = z.object({
   lastName: z.string().min(1, "Last name is required"),
   email: z.string()
     .email("Invalid email address")
-    .refine(email => email.endsWith('@t-systems.com'), {
+    .refine(email => email.toLowerCase().endsWith('@t-systems.com'), {
         message: 'Only @t-systems.com emails are allowed',
     }),
   password: z.string().min(6, "Password must be at least 6 characters"),
