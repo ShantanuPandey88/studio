@@ -19,7 +19,7 @@ const signupSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string()
     .email('Please enter a valid email address')
-    .refine(email => email.endsWith('@t-systems.com'), {
+    .refine(email => email.toLowerCase().endsWith('@t-systems.com'), {
         message: 'Only @t-systems.com emails are allowed',
     }),
   password: z.string().min(6, 'Password must be at least 6 characters'),
@@ -53,8 +53,9 @@ export default function SignupPage() {
     setError(null);
     try {
         await signup(data.email, data.password, `${data.firstName} ${data.lastName}`);
-        // The onAuthStateChanged listener in AuthContext will handle the redirect
-        // so we don't need to explicitly push here.
+        // The onAuthStateChanged listener in AuthContext will handle the redirect.
+        // We set loading to false here to update the button state, though the user will be redirected shortly.
+        setIsLoading(false);
     } catch(err: any) {
         if (err.message.includes('email-already-in-use')) {
              setError('An account with this email address already exists.');

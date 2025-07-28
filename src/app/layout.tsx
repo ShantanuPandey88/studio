@@ -3,6 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from '@/context/AuthContext';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'SeatServe',

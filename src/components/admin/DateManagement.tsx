@@ -10,7 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
 import { getHolidays, type Unsubscribe } from "@/lib/firestore-adapter";
-import { addHoliday, deleteHoliday } from "@/lib/actions";
+import { addHoliday } from "@/lib/actions";
 import type { Holiday } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/context/AuthContext";
+import { deleteHoliday } from "@/lib/actions";
+
 
 const formSchema = z.object({
   date: z.date({ required_error: "A date is required." }),
@@ -31,6 +33,7 @@ const formSchema = z.object({
 
 export function DateManagement() {
   const [holidays, setHolidays] = React.useState<Holiday[]>([]);
+  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const { toast } = useToast();
   const { user, db } = useAuth();
 
@@ -50,7 +53,9 @@ export function DateManagement() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-        await addHoliday(values);
+        // Format the date to a 'yyyy-MM-dd' string to avoid timezone issues.
+        const dateString = format(values.date, 'yyyy-MM-dd');
+        await addHoliday({ name: values.name, date: dateString });
         toast({
             title: "Holiday Added",
             description: `${values.name} on ${format(values.date, "PPP")} is now a non-bookable day.`,
@@ -110,7 +115,7 @@ export function DateManagement() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Date</FormLabel>
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -133,7 +138,10 @@ export function DateManagement() {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) => {
+                            field.onChange(date);
+                            setIsCalendarOpen(false);
+                          }}
                           initialFocus
                         />
                       </PopoverContent>

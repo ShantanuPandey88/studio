@@ -1,7 +1,6 @@
 
 'use server';
 
-import { startOfDay } from "date-fns";
 import type { User as AppUser } from "./firebase";
 import type { Desk, Holiday } from "@/types";
 import { initializeAdminApp } from '@/lib/firebase-admin';
@@ -15,7 +14,7 @@ import { sendEmail } from "@/services/email";
  * This is a one-time setup function.
  */
 export async function setupInitialDesks() {
-  const { db } = initializeAdminApp();
+  const { db } = await initializeAdminApp();
   try {
     const desksCollectionRef = db.collection("desks");
     const existingDesksSnapshot = await desksCollectionRef.limit(1).get();
@@ -51,7 +50,7 @@ export async function setupInitialDesks() {
 
 // Desk Actions
 export async function addDesk(desk: Desk) {
-    const { db } = initializeAdminApp();
+    const { db } = await initializeAdminApp();
     const deskRef = db.collection("desks").doc(desk.id);
     const deskSnap = await deskRef.get();
     if (deskSnap.exists) {
@@ -61,7 +60,7 @@ export async function addDesk(desk: Desk) {
 }
 
 export async function deleteDesk(deskId: string) {
-    const { db } = initializeAdminApp();
+    const { db } = await initializeAdminApp();
     const bookingsCheck = await db.collection("bookings").where("deskId", "==", deskId).limit(1).get();
     if (!bookingsCheck.empty) {
         throw new Error("Cannot remove desk with active bookings.");
@@ -70,10 +69,13 @@ export async function deleteDesk(deskId: string) {
 }
 
 // Holiday Actions
-export type AddHolidayPayload = { name: string, date: Date };
+export type AddHolidayPayload = { name: string, date: string };
 export async function addHoliday(holiday: AddHolidayPayload) {
-    const { db } = initializeAdminApp();
-    const normalizedDate = startOfDay(holiday.date);
+    const { db } = await initializeAdminApp();
+    // Create a new Date object from the string, ensuring it's treated as UTC.
+    // The 'T00:00:00.000Z' suffix is critical for this.
+    const normalizedDate = new Date(`${holiday.date}T00:00:00.000Z`);
+    
     const q = db.collection("holidays").where("date", "==", admin.firestore.Timestamp.fromDate(normalizedDate));
     const querySnapshot = await q.get();
     if (!querySnapshot.empty) {
@@ -86,7 +88,7 @@ export async function addHoliday(holiday: AddHolidayPayload) {
 }
 
 export async function deleteHoliday(holidayId: string) {
-    const { db } = initializeAdminApp();
+    const { db } = await initializeAdminApp();
     await db.collection("holidays").doc(holidayId).delete();
 }
 
@@ -99,8 +101,8 @@ export type SignupUserPayload = {
 };
 
 export async function signupUser(payload: SignupUserPayload) {
-    const { auth, db } = initializeAdminApp();
-    if (!payload.email.endsWith('@t-systems.com')) {
+    const { auth, db } = await initializeAdminApp();
+    if (!payload.email.toLowerCase().endsWith('@t-systems.com')) {
         throw new Error('Only @t-systems.com emails are allowed to sign up.');
     }
     
@@ -153,8 +155,8 @@ export type AddUserPayload = {
 };
 
 export async function addUser(payload: AddUserPayload) {
-     const { auth, db } = initializeAdminApp();
-     if (!payload.email.endsWith('@t-systems.com')) {
+     const { auth, db } = await initializeAdminApp();
+     if (!payload.email.toLowerCase().endsWith('@t-systems.com')) {
         throw new Error('Only @t-systems.com emails are allowed.');
     }
     const userRecord = await auth.createUser({
@@ -180,18 +182,46 @@ export async function addUser(payload: AddUserPayload) {
      }
 }
 
-export async function deleteUserAction(uid: string) {
-    const { auth, db } = initializeAdminApp();
-    const userToUpdate = await auth.getUser(uid);
-    if (userToUpdate.customClaims?.admin) {
-        const adminUsersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
-        if (adminUsersSnapshot.size <= 1) {
-            throw new Error("Cannot delete the only admin account.");
-        }
+async function cancelUserBookings(db: admin.firestore.Firestore, uid: string) {
+    const bookingsRef = db.collection('bookings');
+    const userBookingsQuery = bookingsRef.where('userId', '==', uid);
+    const bookingsSnapshot = await userBookingsQuery.get();
+    
+    if (bookingsSnapshot.empty) {
+        return; // No bookings to cancel
     }
 
-    await auth.deleteUser(uid);
-    await db.collection('users').doc(uid).delete();
+    const batch = db.batch();
+    bookingsSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    
+    await batch.commit();
+    console.log(`Cancelled ${bookingsSnapshot.size} bookings for user ${uid}.`);
+}
+
+
+export async function deleteUserAction(uid: string) {
+    try {
+        const { auth, db } = await initializeAdminApp();
+        const userToUpdate = await auth.getUser(uid);
+        if (userToUpdate.customClaims?.admin) {
+            const adminUsersSnapshot = await db.collection('users').where('role', '==', 'admin').get();
+            if (adminUsersSnapshot.size <= 1) {
+                throw new Error("Cannot delete the only admin account.");
+            }
+        }
+
+        // Cancel bookings before deleting the user
+        await cancelUserBookings(db, uid);
+
+        await auth.deleteUser(uid);
+        await db.collection('users').doc(uid).delete();
+    } catch (error: any) {
+        console.error("Error in deleteUserAction:", error);
+        // Re-throw a more specific error to be caught by the client component.
+        throw new Error(error.message || "An unexpected error occurred while deleting the user.");
+    }
 }
 
 export type UpdateUserPayload = {
@@ -201,7 +231,7 @@ export type UpdateUserPayload = {
 };
 
 export async function updateUser(uid: string, payload: UpdateUserPayload) {
-    const { auth, db } = initializeAdminApp();
+    const { auth, db } = await initializeAdminApp();
     await auth.updateUser(uid, { displayName: payload.displayName });
     await db.collection('users').doc(uid).update({ 
         displayName: payload.displayName,
@@ -217,7 +247,7 @@ export async function updateUser(uid: string, payload: UpdateUserPayload) {
 }
 
 export async function setUserDisabledStatusAction(uid: string, disabled: boolean) {
-    const { auth, db } = initializeAdminApp();
+    const { auth, db } = await initializeAdminApp();
     if (disabled) {
         const userToUpdate = await auth.getUser(uid);
         if (userToUpdate.customClaims?.admin) {
@@ -226,6 +256,8 @@ export async function setUserDisabledStatusAction(uid: string, disabled: boolean
                 throw new Error("Cannot disable the only active admin account.");
              }
         }
+        // If disabling, cancel all of the user's bookings.
+        await cancelUserBookings(db, uid);
     }
     
     await auth.updateUser(uid, { disabled });
@@ -233,7 +265,7 @@ export async function setUserDisabledStatusAction(uid: string, disabled: boolean
 }
 
 export async function sendPasswordResetLink(payload: { email: string }) {
-  const { auth } = initializeAdminApp();
+  const { auth } = await initializeAdminApp();
   try {
     // Check if the user exists first.
     const user = await auth.getUserByEmail(payload.email);
@@ -279,7 +311,7 @@ export type ResetPasswordPayload = {
   newPassword: string;
 };
 export async function resetPasswordAction(payload: ResetPasswordPayload) {
-    const { auth } = initializeAdminApp();
+    const { auth } = await initializeAdminApp();
     // Verify the code first
     const email = await auth.verifyPasswordResetCode(payload.oobCode);
     
